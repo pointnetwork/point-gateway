@@ -1,0 +1,22 @@
+{
+  "extends": "airbnb-typescript-prettier",
+  "rules": {
+    "no-console": "off",
+    "import/prefer-default-export": "off",
+    "quotes": ["error", "single"],
+    "prettier/prettier": ["error", { "singleQuote": true }],
+    "@typescript-eslint/no-explicit-any": "off",
+    "max-classes-per-file": "off",
+    "no-async-promise-executor": "off",
+    "consistent-return": "off",
+    "no-await-in-loop": "off",
+    "@typescript-eslint/ban-types": "off",
+    "func-names": "off",
+    "object-shorthand": "off",
+    "no-plusplus": "off",
+    "no-useless-constructor": "off",
+    "@typescript-eslint/no-useless-constructor": ["error"],
+    "no-restricted-syntax": "off",
+    "class-methods-use-this": "off"
+  }
+}
