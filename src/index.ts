@@ -11,6 +11,7 @@ import { downloadPointNode } from './utils/downloadPointNode';
 import { startPointNode } from './utils/startPointNode';
 import { nodePointHealthCheck } from './utils/nodePointHealthCheck';
 import { getContextPath } from './utils/getContextPath';
+import { log } from './utils/logger';
 
 const PLATFORM = 'linux';
 const OUTDATED_GATEWAY_SHUTDOWN_TIME = 30;
@@ -36,19 +37,19 @@ async function main(startServer = false) {
     if (isNewVersion || startServer) {
       const context = await createContext(latestTag);
       if (isNewVersion) {
-        console.log(
+        log.info(
           `There is a new version available. Downloading version ${latestTag}`
         );
         await downloadPointNode(assetsUrl, latestTag, PLATFORM);
       }
-      console.log('Starting point node');
+      log.info('Starting point node');
       pointNodes[latestEncodedTag] = startPointNode({
         tag: latestTag,
         platform: PLATFORM,
         ...context,
       });
       if (await nodePointHealthCheck(context.proxyPort, latestTag, 20)) {
-        console.log('Starting new gateway pointing to latest point node');
+        log.info('Starting new gateway pointing to latest point node');
         const worker = startGateway({
           POINT_NODE_PROXY_PORT: context.proxyPort,
           POINT_NODE_VERSION: latestEncodedTag,
@@ -57,9 +58,7 @@ async function main(startServer = false) {
           existingWorker.send({ newVersion: latestTag });
         });
         worker.on('exit', () => {
-          console.log(
-            'Old gateway has been shut down. Stopping old point node.'
-          );
+          log.info('Old gateway has been shut down. Stopping old point node.');
           delete workers[latestEncodedTag];
           const { pid } = pointNodes[latestEncodedTag];
           pidtree(pid, function (err, pids) {
@@ -68,7 +67,7 @@ async function main(startServer = false) {
         });
         workers[latestEncodedTag] = worker;
       } else {
-        console.error(
+        log.error(
           'Healtcheck for new point node has failed after many retries'
         );
         const { pid } = pointNodes[latestEncodedTag];
@@ -89,7 +88,7 @@ async function main(startServer = false) {
             process.env.POINT_NODE_VERSION
           )
         ) {
-          console.log(
+          log.info(
             `Turning down old gateway version in ${OUTDATED_GATEWAY_SHUTDOWN_TIME} seconds`
           );
           setTimeout(
@@ -101,9 +100,9 @@ async function main(startServer = false) {
     });
     server.listen(GATEWAY_PORT, (err) => {
       if (err) {
-        console.error(err);
+        log.error(err);
       } else {
-        console.log(
+        log.info(
           `Gateway connected to point node version ${process.env.POINT_NODE_VERSION}`
         );
       }

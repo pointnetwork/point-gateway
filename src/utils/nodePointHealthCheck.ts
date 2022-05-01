@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { https } from 'follow-redirects';
 import { delay } from './delay';
+import { log } from './logger';
 
 const HEALTH_CHECK_RETRY_TIME = 3; // seconds
 
@@ -11,7 +12,7 @@ export async function nodePointHealthCheck(
 ): Promise<boolean> {
   const httpsAgent = new https.Agent({ rejectUnauthorized: false });
   try {
-    console.log('Running health check');
+    log.info('Running health check');
     const { data } = await axios.get('https://point/v1/api/status/meta', {
       timeout: 3000,
       proxy: {

@@ -20,6 +20,6 @@ Tasks:
   - [x] Download latest point-node and execute it (working with linux)
   - [x] Automatically self-update
   - [x] 0 downtime on update
-  - [] Self-restart in case of failures (use pm2)
+  - [x] Self-restart in case of failures (use pm2)
   - [] report if failure is fatal (e.g. no more disk space),
   - [] Add readme with explanation
