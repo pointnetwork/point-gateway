@@ -1,6 +1,8 @@
 import * as cheerio from 'cheerio';
 import fastify from 'fastify';
 import proxy from 'fastify-http-proxy';
+import { createReadStream } from 'fs';
+import { resolve as pathResolve } from 'path';
 import { pointSdk } from './scripts/pointSdk';
 import { removeMetamask } from './scripts/removeMetamask';
 import { log } from './utils/logger';
@@ -14,6 +16,15 @@ const scripts = [pointSdk, removeMetamask];
 
 server.register(proxy, {
   upstream: POINT_NODE_URL,
+  preHandler: (request, reply, next) => {
+    if (request.method === 'GET') {
+      return next();
+    }
+    const downloadPointTemplate = createReadStream(
+      pathResolve('./templates/downloadPoint.html')
+    );
+    reply.type('text/html').send(downloadPointTemplate);
+  },
   replyOptions: {
     rewriteRequestHeaders: (request, headers) => {
       const { rawHeaders } = request;
@@ -62,5 +73,4 @@ server.register(proxy, {
       });
     },
   },
-  httpMethods: ['GET'],
 });
