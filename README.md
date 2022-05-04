@@ -17,7 +17,7 @@ Tasks:
 
   - [x] Inject scripts into body (point sdki)
   - [x] Remove metamask/ethereum from window object
-  - [] Show popup inviting to download point browser for write-action
+  - [x] Show popup inviting to download point browser for write-action
   - [x] Download latest point-node and execute it (working with linux)
   - [x] Automatically self-update
   - [x] 0 downtime on update
