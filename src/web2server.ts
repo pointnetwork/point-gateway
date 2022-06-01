@@ -1,10 +1,8 @@
 import * as cheerio from 'cheerio';
 import fastify from 'fastify';
 import proxy from 'fastify-http-proxy';
-import { createReadStream } from 'fs';
+import { createReadStream, readFileSync } from 'fs';
 import { resolve as pathResolve } from 'path';
-import { pointSdk } from './scripts/pointSdk';
-import { removeMetamask } from './scripts/removeMetamask';
 import { log } from './utils/logger';
 
 export const server = fastify({ logger: true });
@@ -12,18 +10,24 @@ export const server = fastify({ logger: true });
 const POINT_NODE_PROXY_PORT = process.env.POINT_NODE_PROXY_PORT || 8666;
 const POINT_NODE_URL = `https://localhost:${POINT_NODE_PROXY_PORT}`;
 
-const scripts = [pointSdk, removeMetamask];
+const scripts = ['pointSdk.js', 'removeMetamask.js', 'sdkPatch.js'].map(
+  (fileName) =>
+    readFileSync(pathResolve(`./jsScripts/${fileName}`), 'utf-8').toString()
+);
 
 server.register(proxy, {
   upstream: POINT_NODE_URL,
   preHandler: (request, reply, next) => {
-    if (request.method === 'GET') {
-      return next();
+    if (
+      request.method === 'POST' &&
+      (((request.params as any)['*'] as string) || '').includes('send')
+    ) {
+      const downloadPointTemplate = createReadStream(
+        pathResolve('./templates/downloadPoint.html')
+      );
+      return reply.type('text/html').send(downloadPointTemplate);
     }
-    const downloadPointTemplate = createReadStream(
-      pathResolve('./templates/downloadPoint.html')
-    );
-    reply.type('text/html').send(downloadPointTemplate);
+    return next();
   },
   replyOptions: {
     rewriteRequestHeaders: (request, headers) => {
