@@ -10,9 +10,21 @@ export const server = fastify({ logger: true });
 const POINT_NODE_PROXY_PORT = process.env.POINT_NODE_PROXY_PORT || 8666;
 const POINT_NODE_URL = `https://localhost:${POINT_NODE_PROXY_PORT}`;
 
-const scripts = ['pointSdk.js', 'removeMetamask.js', 'sdkPatch.js'].map(
-  (fileName) =>
-    readFileSync(pathResolve(`./jsScripts/${fileName}`), 'utf-8').toString()
+const scripts = [
+  'pointSdk.js',
+  'modalController.js',
+  'removeMetamask.js',
+  'sdkPatch.js',
+].map((fileName) =>
+  readFileSync(pathResolve(`./jsScripts/${fileName}`), 'utf-8').toString()
+);
+
+const styles = ['modal.css'].map((fileName) =>
+  readFileSync(pathResolve(`./styles/${fileName}`), 'utf-8').toString()
+);
+
+const htmlTemplates = ['downloadPointModal.html'].map((fileName) =>
+  readFileSync(pathResolve(`./templates/${fileName}`), 'utf-8').toString()
 );
 
 server.register(proxy, {
@@ -66,9 +78,16 @@ server.register(proxy, {
         try {
           const decompressed = buffer;
           const htmlContent = cheerio.load(decompressed.toString());
+          styles.forEach((style) => {
+            htmlContent('body').append(`<style>${style}</style>`);
+          });
+          htmlTemplates.forEach((template) => {
+            htmlContent('body').append(template);
+          });
           scripts.forEach((script) => {
             htmlContent('body').append(`<script>${script}</script>`);
           });
+          console.log({ htmlTemplates });
           const bufferWithScripts = htmlContent.html();
           reply.send(bufferWithScripts);
         } catch (e) {
