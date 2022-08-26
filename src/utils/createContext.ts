@@ -14,8 +14,9 @@ function createContextFactory() {
     const keystorePath = `${datadirPath}/keystore`;
     await makeSurePathExists(keystorePath, true);
     const keysPath = join(keystoreSrc || '', 'key.json');
-    console.log({ keysPath, keystoreSrc });
-    if (keystoreSrc && (await fileExists(keysPath))) {
+    const fileExist = await fileExists(keysPath);
+    console.log({ keysPath, keystoreSrc, fileExist });
+    if (keystoreSrc && fileExist) {
       console.log(`Found identity in ${keysPath}`);
       await copyFile(keysPath, keystorePath);
     } else {
