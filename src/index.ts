@@ -35,7 +35,10 @@ async function main(startServer = false) {
       currentEncodedTag || '0_0_0'
     );
     if (isNewVersion || startServer) {
-      const context = await createContext(latestTag);
+      const context = await createContext(
+        latestTag,
+        process.env.POINT_KEY_PATH
+      );
       if (isNewVersion) {
         log.info(
           `There is a new version available. Downloading version ${latestTag}`
