@@ -15,8 +15,10 @@ function createContextFactory() {
     await makeSurePathExists(keystorePath, true);
     const keysPath = pathResolve(keystoreSrc || '', 'key.json');
     if (keystoreSrc && (await fileExists(keysPath))) {
+      console.log(`Found identity in ${keysPath}`);
       await copyFile(keysPath, keystorePath);
     } else {
+      console.log('Creating new identity');
       await generateAndSaveKeys(keystorePath);
     }
     return {
