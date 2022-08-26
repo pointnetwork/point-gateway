@@ -1,4 +1,4 @@
-import { resolve as pathResolve } from 'path';
+import { join } from 'path';
 import { copyFile } from 'fs/promises';
 import { fileExists } from './fileExists';
 import { getContextPath } from './getContextPath';
@@ -13,7 +13,7 @@ function createContextFactory() {
     const datadirPath = getContextPath(tagName);
     const keystorePath = `${datadirPath}/keystore`;
     await makeSurePathExists(keystorePath, true);
-    const keysPath = pathResolve(keystoreSrc || '', 'key.json');
+    const keysPath = join(keystoreSrc || '', 'key.json');
     console.log({ keysPath, keystoreSrc });
     if (keystoreSrc && (await fileExists(keysPath))) {
       console.log(`Found identity in ${keysPath}`);
