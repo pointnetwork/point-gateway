@@ -28,7 +28,7 @@ server.register(proxy, {
   preHandler: (request, reply, next) => {
     console.log({ method: request.method });
     if (request.method === 'POST') {
-      console.log({ params: request.params, body: request.body });
+      console.log({ params: request.params });
     }
     if (
       request.method === 'POST' &&
