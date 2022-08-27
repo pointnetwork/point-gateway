@@ -26,6 +26,9 @@ const htmlTemplates = ['downloadPointModal.html'].map((fileName) =>
 server.register(proxy, {
   upstream: POINT_NODE_URL,
   preHandler: (request, reply, next) => {
+    if (request.method === 'POST') {
+      console.log({ params: request.params, body: request.body });
+    }
     if (
       request.method === 'POST' &&
       (((request.params as any)['*'] as string) || '').includes('send')
