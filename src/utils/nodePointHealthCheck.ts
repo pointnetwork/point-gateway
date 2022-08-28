@@ -22,6 +22,7 @@ export async function nodePointHealthCheck(
       },
       httpsAgent,
     });
+    console.log({ a: data.data.pointNodeVersion, b: tag.slice(1) });
     if (data.data.pointNodeVersion === tag.slice(1)) {
       return true;
     }
