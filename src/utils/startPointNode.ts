@@ -22,7 +22,7 @@ export function startPointNode({
   const pointPath = `./opt/${encodeTag(tag)}/bin/${platform}/point`;
   const pointserver = exec(
     // `chmod 777 ${pointPath} && DATADIR=${datadirPath} ZPROXY_PORT=${proxyPort} NODE_ENV=production POINT_KEYSTORE=${keystorePath} API_PORT=${apiPort} ${pointPath}`
-    `chmod 777 ${pointPath} && DATADIR=${datadirPath} ZPROXY_PORT=${proxyPort} NODE_ENV=production API_PORT=${apiPort} SDK_FILE=${sdkPath} ${pointPath}`
+    `chmod 777 ${pointPath} && DATADIR=${datadirPath} ZPROXY_PORT=${proxyPort} NODE_ENV=production API_PORT=${apiPort} SDK_FILE=${sdkPath} MODE=gateway ${pointPath}`
   );
   log.info('started server');
   pointserver.stderr?.pipe(process.stderr);
