@@ -10,13 +10,9 @@ export const server = fastify({ logger: true });
 const POINT_NODE_PROXY_PORT = process.env.POINT_NODE_PROXY_PORT || 8666;
 const POINT_NODE_URL = `https://localhost:${POINT_NODE_PROXY_PORT}`;
 
-const scripts = [
-  'pointSdk.js',
-  'modalController.js',
-  'removeMetamask.js',
-  'sdkPatch.js',
-].map((fileName) =>
-  readFileSync(pathResolve(`./jsScripts/${fileName}`), 'utf-8').toString()
+const scripts = ['modalController.js', 'removeMetamask.js', 'sdkPatch.js'].map(
+  (fileName) =>
+    readFileSync(pathResolve(`./jsScripts/${fileName}`), 'utf-8').toString()
 );
 
 const styles = ['modal.css'].map((fileName) =>
