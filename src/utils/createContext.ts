@@ -14,7 +14,6 @@ function createContextFactory() {
     const keystorePath = `${datadirPath}/keystore`;
     await makeSurePathExists(keystorePath, true);
     const keysPath = pathResolve(keystoreSrc || '', 'key.json');
-    const sdkPath = pathResolve(datadirPath, 'pointsdk-v0.0.37.js'); // TODO
     if (keystoreSrc && (await fileExists(keysPath))) {
       await copyFile(keysPath, `${keystorePath}/key.json`);
     } else {
@@ -25,7 +24,6 @@ function createContextFactory() {
       proxyPort: await proxyPorts.getFreePort(),
       datadirPath,
       keystorePath,
-      sdkPath,
     };
   };
 }

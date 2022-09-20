@@ -1,10 +1,11 @@
 import cluster, { Worker } from 'cluster';
 import pidtree from 'pidtree';
 import { rmdir } from 'fs/promises';
+import mkdirp from 'mkdirp';
 import { server } from './web2server';
 import { isNewerVersion } from './utils/encodedTagCmp';
-import { getPointNodeInfo } from './utils/getPointNodeInfo';
-import { getInstalledTag } from './utils/getInstalledTag';
+import { getRepoInfo } from './utils/getPointNodeInfo';
+import { getInstalledNodeTag } from './utils/getInstalledNodeTag';
 import { encodeTag } from './utils/encodeTag';
 import { createContext } from './utils/createContext';
 import { downloadPointNode } from './utils/downloadPointNode';
@@ -12,6 +13,8 @@ import { startPointNode } from './utils/startPointNode';
 import { nodePointHealthCheck } from './utils/nodePointHealthCheck';
 import { getContextPath } from './utils/getContextPath';
 import { log } from './utils/logger';
+import { getInstalledSdkTag } from './utils/getInstalledSdkTag';
+import { downloadPointSdk } from './utils/downloadPointSdk';
 
 const PLATFORM = 'linux';
 const OUTDATED_GATEWAY_SHUTDOWN_TIME = 30;
@@ -27,66 +30,104 @@ const pointNodes: Record<string, any> = {};
 
 async function main(startServer = false) {
   if (cluster.isMaster) {
-    const { assetsUrl, latestTag } = await getPointNodeInfo();
-    const currentEncodedTag = await getInstalledTag();
-    const latestEncodedTag = encodeTag(latestTag);
-    const isNewVersion = isNewerVersion(
-      latestEncodedTag,
-      currentEncodedTag || '0_0_0'
+    await Promise.all([mkdirp('./opt/engine'), mkdirp('./opt/sdk')]);
+    const [
+      { assetsUrl: pointAssetsUrl, latestTag: pointLatestTag },
+      { assetsUrl: sdkAssetsUrl, latestTag: sdkLatestTag },
+      pointCurrentEncodedTag,
+      sdkCurrentEncodedTag,
+    ] = await Promise.all([
+      getRepoInfo('engine'),
+      getRepoInfo('sdk'),
+      getInstalledNodeTag(),
+      getInstalledSdkTag(),
+    ]);
+
+    const pointLatestEncodedTag = encodeTag(pointLatestTag);
+    const sdkLatestEncodedTag = encodeTag(sdkLatestTag);
+    const isNewPointVersion = isNewerVersion(
+      pointLatestEncodedTag,
+      pointCurrentEncodedTag || '0_0_0'
     );
-    if (isNewVersion || startServer) {
-      const context = await createContext(latestTag);
-      if (isNewVersion) {
+    const isNewSdkVersion = isNewerVersion(
+      sdkLatestEncodedTag,
+      sdkCurrentEncodedTag || '0_0_0'
+    );
+
+    if (isNewPointVersion || isNewSdkVersion || startServer) {
+      const context = await createContext(pointLatestTag);
+      if (isNewPointVersion) {
         log.info(
-          `There is a new version available. Downloading version ${latestTag}`
+          `There is a new engine version available. Downloading version ${pointLatestTag}`
         );
-        await downloadPointNode(assetsUrl, latestTag, PLATFORM);
+        await downloadPointNode(pointAssetsUrl, pointLatestTag, PLATFORM);
+      }
+      if (isNewSdkVersion) {
+        log.info(
+          `There is a new SDK version available. Downloading version ${sdkLatestTag}`
+        );
+        await downloadPointSdk(sdkAssetsUrl, sdkLatestTag);
       }
       log.info('Starting point node');
-      pointNodes[latestEncodedTag] = startPointNode({
-        tag: latestTag,
-        platform: PLATFORM,
-        ...context,
-      });
-      if (await nodePointHealthCheck(context.proxyPort, latestTag, 20)) {
+      pointNodes[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`] =
+        startPointNode({
+          tag: pointLatestTag,
+          platform: PLATFORM,
+          sdkPath: `./opt/sdk/${sdkLatestEncodedTag}`,
+          ...context,
+        });
+      if (await nodePointHealthCheck(context.proxyPort, pointLatestTag, 20)) {
         log.info('Starting new gateway pointing to latest point node');
         const worker = startGateway({
           POINT_NODE_PROXY_PORT: context.proxyPort,
-          POINT_NODE_VERSION: latestEncodedTag,
+          POINT_NODE_VERSION: pointLatestEncodedTag,
+          POINT_SDK_VERSION: sdkLatestEncodedTag,
         });
         Object.values(workers).forEach((existingWorker) => {
-          existingWorker.send({ newVersion: latestTag });
+          existingWorker.send({
+            newPointVersion: pointLatestTag,
+            newSdkVersion: sdkLatestTag,
+          });
         });
         worker.on('exit', () => {
           log.info('Old gateway has been shut down. Stopping old point node.');
-          delete workers[latestEncodedTag];
-          const { pid } = pointNodes[latestEncodedTag];
+          delete workers[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`];
+          const { pid } =
+            pointNodes[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`];
           pidtree(pid, function (err, pids) {
             pids.forEach((childrenPid) => process.kill(childrenPid));
           });
         });
-        workers[latestEncodedTag] = worker;
+        workers[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`] = worker;
       } else {
         log.error(
           'Healtcheck for new point node has failed after many retries'
         );
-        const { pid } = pointNodes[latestEncodedTag];
+        const { pid } =
+          pointNodes[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`];
         pidtree(pid, function (err, pids) {
           pids.forEach((childrenPid) => process.kill(childrenPid));
         });
-        delete pointNodes[latestEncodedTag];
-        rmdir(getContextPath(latestTag), { recursive: true });
+        delete pointNodes[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`];
+        rmdir(getContextPath(pointLatestTag), { recursive: true });
       }
     }
     setTimeout(main, CHECK_NEW_VERSION_INTERVAL_TIME * 1000);
   } else {
-    process.on('message', function (msg: { newVersion: string }) {
-      if (msg.newVersion) {
+    process.on(
+      'message',
+      function (msg: { newPointVersion: string; newSdkVersion: string }) {
         if (
-          isNewerVersion(
-            encodeTag(msg.newVersion),
-            process.env.POINT_NODE_VERSION
-          )
+          (msg.newPointVersion &&
+            isNewerVersion(
+              encodeTag(msg.newPointVersion),
+              process.env.POINT_NODE_VERSION
+            )) ||
+          (msg.newSdkVersion &&
+            isNewerVersion(
+              encodeTag(msg.newSdkVersion),
+              process.env.POINT_SDK_VERSION
+            ))
         ) {
           log.info(
             `Turning down old gateway version in ${OUTDATED_GATEWAY_SHUTDOWN_TIME} seconds`
@@ -97,13 +138,13 @@ async function main(startServer = false) {
           );
         }
       }
-    });
+    );
     server.listen(GATEWAY_PORT, (err) => {
       if (err) {
         log.error(err);
       } else {
         log.info(
-          `Gateway connected to point node version ${process.env.POINT_NODE_VERSION}`
+          `Gateway connected to point node version ${process.env.POINT_NODE_VERSION}, sdk version ${process.env.POINT_SDK_VERSION}`
         );
       }
     });

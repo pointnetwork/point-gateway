@@ -3,6 +3,7 @@ declare global {
     interface ProcessEnv {
       POINT_NODE_PROXY_PORT: number;
       POINT_NODE_VERSION: string;
+      POINT_SDK_VERSION: string;
     }
   }
 }

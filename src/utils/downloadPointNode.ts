@@ -11,5 +11,5 @@ export async function downloadPointNode(
   const downloadUrl = assetsInfo.find((assetInfo: { name: string }) =>
     assetInfo.name.includes(platform)
   ).browser_download_url;
-  await untarRemoteUrl(downloadUrl, `./opt/${encodeTag(latestTag)}`);
+  await untarRemoteUrl(downloadUrl, `./opt/engine/${encodeTag(latestTag)}`);
 }
