@@ -42,8 +42,7 @@ server.register(proxy, {
     rewriteRequestHeaders: (request, headers) => {
       const { rawHeaders } = request;
       const host = rawHeaders[rawHeaders.indexOf('Host') + 1];
-      const [subdomain] = host.split('.');
-      return { ...headers, host: `${subdomain}.point` };
+      return { ...headers, host: host.split('.').slice(0, -1).join('.') };
     },
     onError: (reply, error) => {
       try {
