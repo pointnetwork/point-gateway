@@ -2,7 +2,7 @@ import axios from 'axios';
 import { writeFile } from 'fs/promises';
 import { encodeTag } from './encodeTag';
 
-export async function downloadPointSdk(assetsUrl: string, latestTag: string) {
+export async function downloadSdk(assetsUrl: string, latestTag: string) {
   const { data: assetsInfo } = await axios.get(assetsUrl);
   const downloadUrl = assetsInfo.find((assetInfo: { name: string }) =>
     assetInfo.name.startsWith('pointsdk')

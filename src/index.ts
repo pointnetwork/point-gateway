@@ -4,17 +4,17 @@ import { rmdir } from 'fs/promises';
 import mkdirp from 'mkdirp';
 import { server } from './web2server';
 import { isNewerVersion } from './utils/encodedTagCmp';
-import { getRepoInfo } from './utils/getPointNodeInfo';
-import { getInstalledNodeTag } from './utils/getInstalledNodeTag';
+import { getRepoInfo } from './utils/getEngineInfo';
+import { getInstalledEngineTag } from './utils/getInstalledEngineTag';
 import { encodeTag } from './utils/encodeTag';
 import { createContext } from './utils/createContext';
-import { downloadPointNode } from './utils/downloadPointNode';
-import { startPointNode } from './utils/startPointNode';
-import { nodePointHealthCheck } from './utils/nodePointHealthCheck';
+import { downloadEngine } from './utils/downloadEngine';
+import { startEngine } from './utils/startEngine';
+import { engineHealthCheck } from './utils/engineHealthCheck';
 import { getContextPath } from './utils/getContextPath';
 import { log } from './utils/logger';
 import { getInstalledSdkTag } from './utils/getInstalledSdkTag';
-import { downloadPointSdk } from './utils/downloadPointSdk';
+import { downloadSdk } from './utils/downloadSdk';
 
 const PLATFORM = 'linux';
 const OUTDATED_GATEWAY_SHUTDOWN_TIME = 30;
@@ -26,107 +26,107 @@ function startGateway(envVars: Record<string, string | number>): Worker {
 }
 
 const workers: Record<string, Worker> = {};
-const pointNodes: Record<string, any> = {};
+const engines: Record<string, any> = {};
 
 async function main(startServer = false) {
   if (cluster.isMaster) {
     await Promise.all([mkdirp('./opt/engine'), mkdirp('./opt/sdk')]);
     const [
-      { assetsUrl: pointAssetsUrl, latestTag: pointLatestTag },
+      { assetsUrl: engineAssetsUrl, latestTag: engineLatestTag },
       { assetsUrl: sdkAssetsUrl, latestTag: sdkLatestTag },
-      pointCurrentEncodedTag,
+      engineCurrentEncodedTag,
       sdkCurrentEncodedTag,
     ] = await Promise.all([
       getRepoInfo('engine'),
       getRepoInfo('sdk'),
-      getInstalledNodeTag(),
+      getInstalledEngineTag(),
       getInstalledSdkTag(),
     ]);
 
-    const pointLatestEncodedTag = encodeTag(pointLatestTag);
+    const engineLatestEncodedTag = encodeTag(engineLatestTag);
     const sdkLatestEncodedTag = encodeTag(sdkLatestTag);
-    const isNewPointVersion = isNewerVersion(
-      pointLatestEncodedTag,
-      pointCurrentEncodedTag || '0_0_0'
+    const isNewEngineVersion = isNewerVersion(
+      engineLatestEncodedTag,
+      engineCurrentEncodedTag || '0_0_0'
     );
     const isNewSdkVersion = isNewerVersion(
       sdkLatestEncodedTag,
       sdkCurrentEncodedTag || '0_0_0'
     );
 
-    if (isNewPointVersion || isNewSdkVersion || startServer) {
-      const context = await createContext(pointLatestTag);
-      if (isNewPointVersion) {
+    if (isNewEngineVersion || isNewSdkVersion || startServer) {
+      const context = await createContext(engineLatestTag);
+      if (isNewEngineVersion) {
         log.info(
-          `There is a new engine version available. Downloading version ${pointLatestTag}`
+          `There is a new engine version available. Downloading version ${engineLatestTag}`
         );
-        await downloadPointNode(pointAssetsUrl, pointLatestTag, PLATFORM);
+        await downloadEngine(engineAssetsUrl, engineLatestTag, PLATFORM);
       }
       if (isNewSdkVersion) {
         log.info(
           `There is a new SDK version available. Downloading version ${sdkLatestTag}`
         );
-        await downloadPointSdk(sdkAssetsUrl, sdkLatestTag);
+        await downloadSdk(sdkAssetsUrl, sdkLatestTag);
       }
-      log.info('Starting point node');
-      pointNodes[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`] =
-        startPointNode({
-          tag: pointLatestTag,
+      log.info('Starting engine');
+      engines[`${engineLatestEncodedTag}__${sdkLatestEncodedTag}`] =
+        startEngine({
+          tag: engineLatestTag,
           platform: PLATFORM,
           sdkPath: `./opt/sdk/${sdkLatestEncodedTag}`,
           ...context,
         });
-      if (await nodePointHealthCheck(context.proxyPort, pointLatestTag, 20)) {
-        log.info('Starting new gateway pointing to latest point node');
+      if (await engineHealthCheck(context.proxyPort, engineLatestTag, 20)) {
+        log.info('Starting new gateway pointing to latest engine');
         const worker = startGateway({
-          POINT_NODE_PROXY_PORT: context.proxyPort,
-          POINT_NODE_VERSION: pointLatestEncodedTag,
-          POINT_SDK_VERSION: sdkLatestEncodedTag,
+          ENGINE_PROXY_PORT: context.proxyPort,
+          ENGINE_VERSION: engineLatestEncodedTag,
+          SDK_VERSION: sdkLatestEncodedTag,
         });
         Object.values(workers).forEach((existingWorker) => {
           existingWorker.send({
-            newPointVersion: pointLatestTag,
+            newEngineVersion: engineLatestTag,
             newSdkVersion: sdkLatestTag,
           });
         });
         worker.on('exit', () => {
-          log.info('Old gateway has been shut down. Stopping old point node.');
-          delete workers[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`];
+          log.info('Old gateway has been shut down. Stopping old engine.');
+          delete workers[`${engineLatestEncodedTag}__${sdkLatestEncodedTag}`];
           const { pid } =
-            pointNodes[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`];
+            engines[`${engineLatestEncodedTag}__${sdkLatestEncodedTag}`];
           pidtree(pid, function (err, pids) {
             pids.forEach((childrenPid) => process.kill(childrenPid));
           });
         });
-        workers[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`] = worker;
+        workers[`${engineLatestEncodedTag}__${sdkLatestEncodedTag}`] = worker;
       } else {
         log.error(
-          'Healtcheck for new point node has failed after many retries'
+          'Healtcheck for the new engine has failed after many retries'
         );
         const { pid } =
-          pointNodes[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`];
+          engines[`${engineLatestEncodedTag}__${sdkLatestEncodedTag}`];
         pidtree(pid, function (err, pids) {
           pids.forEach((childrenPid) => process.kill(childrenPid));
         });
-        delete pointNodes[`${pointLatestEncodedTag}__${sdkLatestEncodedTag}`];
-        rmdir(getContextPath(pointLatestTag), { recursive: true });
+        delete engines[`${engineLatestEncodedTag}__${sdkLatestEncodedTag}`];
+        rmdir(getContextPath(engineLatestTag), { recursive: true });
       }
     }
     setTimeout(main, CHECK_NEW_VERSION_INTERVAL_TIME * 1000);
   } else {
     process.on(
       'message',
-      function (msg: { newPointVersion: string; newSdkVersion: string }) {
+      function (msg: { newEngineVersion: string; newSdkVersion: string }) {
         if (
-          (msg.newPointVersion &&
+          (msg.newEngineVersion &&
             isNewerVersion(
-              encodeTag(msg.newPointVersion),
-              process.env.POINT_NODE_VERSION
+              encodeTag(msg.newEngineVersion),
+              process.env.ENGINE_VERSION
             )) ||
           (msg.newSdkVersion &&
             isNewerVersion(
               encodeTag(msg.newSdkVersion),
-              process.env.POINT_SDK_VERSION
+              process.env.SDK_VERSION
             ))
         ) {
           log.info(
@@ -144,7 +144,7 @@ async function main(startServer = false) {
         log.error(err);
       } else {
         log.info(
-          `Gateway connected to point node version ${process.env.POINT_NODE_VERSION}, sdk version ${process.env.POINT_SDK_VERSION}`
+          `Gateway connected to the engine version ${process.env.ENGINE_VERSION}, sdk version ${process.env.SDK_VERSION}`
         );
       }
     });

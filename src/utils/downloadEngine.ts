@@ -2,7 +2,7 @@ import axios from 'axios';
 import { encodeTag } from './encodeTag';
 import { untarRemoteUrl } from './untarRemoteUrl';
 
-export async function downloadPointNode(
+export async function downloadEngine(
   assetsUrl: string,
   latestTag: string,
   platform: string
