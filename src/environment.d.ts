@@ -1,8 +1,9 @@
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
-      POINT_NODE_PROXY_PORT: number;
-      POINT_NODE_VERSION: string;
+      ENGINE_PROXY_PORT: number;
+      ENGINE_VERSION: string;
+      SDK_VERSION: string;
     }
   }
 }

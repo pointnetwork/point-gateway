@@ -2,7 +2,7 @@ import axios from 'axios';
 import { encodeTag } from './encodeTag';
 import { untarRemoteUrl } from './untarRemoteUrl';
 
-export async function downloadPointNode(
+export async function downloadEngine(
   assetsUrl: string,
   latestTag: string,
   platform: string
@@ -11,5 +11,5 @@ export async function downloadPointNode(
   const downloadUrl = assetsInfo.find((assetInfo: { name: string }) =>
     assetInfo.name.includes(platform)
   ).browser_download_url;
-  await untarRemoteUrl(downloadUrl, `./opt/${encodeTag(latestTag)}`);
+  await untarRemoteUrl(downloadUrl, `./opt/engine/${encodeTag(latestTag)}`);
 }

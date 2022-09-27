@@ -15,7 +15,7 @@ function createContextFactory() {
     await makeSurePathExists(keystorePath, true);
     const keysPath = pathResolve(keystoreSrc || '', 'key.json');
     if (keystoreSrc && (await fileExists(keysPath))) {
-      await copyFile(keysPath, keystorePath);
+      await copyFile(keysPath, `${keystorePath}/key.json`);
     } else {
       await generateAndSaveKeys(keystorePath);
     }

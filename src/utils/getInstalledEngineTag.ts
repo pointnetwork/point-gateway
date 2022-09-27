@@ -3,10 +3,10 @@ import { getDirectories } from './getDirectories';
 
 const encodedTagRegex = /\d_\d_\d/;
 
-export async function getInstalledTag() {
+export async function getInstalledEngineTag() {
   try {
-    const directories = (await getDirectories('./opt')).filter((folderName) =>
-      folderName.match(encodedTagRegex)
+    const directories = (await getDirectories('./opt/engine')).filter(
+      (folderName) => folderName.match(encodedTagRegex)
     );
     directories.sort(encodedTagCmp).reverse();
     return directories[0];

@@ -5,7 +5,7 @@ import { log } from './logger';
 
 const HEALTH_CHECK_RETRY_TIME = 3; // seconds
 
-export async function nodePointHealthCheck(
+export async function engineHealthCheck(
   proxyPort: number,
   tag: string,
   retryCount = 10
@@ -32,6 +32,6 @@ export async function nodePointHealthCheck(
     if (retryCount <= 0) {
       return false;
     }
-    return nodePointHealthCheck(proxyPort, tag, retryCount - 1);
+    return engineHealthCheck(proxyPort, tag, retryCount - 1);
   }
 }
