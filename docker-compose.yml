@@ -1,0 +1,23 @@
+version: "3.8"
+
+services:
+  app:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+      args:
+        - APP_ENV=${APP_ENV}
+    environment:
+      - APP_ENV=${APP_ENV}
+      - CONTAINER_ROLE=app
+    volumes:
+      - ./keystore:/root/.point/keystore:ro
+    working_dir: /var/www/html
+    ports:
+      - "34500:5000"
+      - "34300:3000"
+
+volumes:
+  node_modules:
