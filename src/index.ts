@@ -139,7 +139,7 @@ async function main(startServer = false) {
         }
       }
     );
-    server.listen(GATEWAY_PORT, (err) => {
+    server.listen(GATEWAY_PORT, '0.0.0.0', (err) => {
       if (err) {
         log.error(err);
       } else {
